@@ -17,7 +17,8 @@ def img_array_8x8_section():
             [-49, -63, -68, -58, -51, -60, -70, -53],
             [-43, -57, -64, -69, -73, -67, -63, -45],
             [-41, -49, -59, -60, -63, -52, -50, -34],
-        ]
+        ],
+        np.float32,
     )
 
 
@@ -26,9 +27,6 @@ def img_array():
     return np.asarray(Image.open("test.jpg").convert("YCbCr").split()[0])
 
 
-def test_downsampling(img_array):
-    img_array = pad_array(img_array)
-    row, col = img_array.shape
-    shrunk_row, shrunk_col = row // 2, col // 2
-    shrunk_img = downsample(img_array)
-    assert shrunk_img.shape == (shrunk_row, shrunk_col)
+def test_dct(img_array_8x8_section: np.ndarray):
+    dct2D_ip(img_array_8x8_section)
+    assert idct2D_ip(img_array_8x8_section) == img_array_8x8_section
