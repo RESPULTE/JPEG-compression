@@ -1,6 +1,6 @@
 import numpy as np
 
-from lookup_table import WEIGHTAGE_TABLE, NORMALIZED_COSINE_TABLE
+from pyimagery.jpeg.lookup_table import WEIGHTAGE_TABLE, NORMALIZED_COSINE_TABLE
 
 
 def dct_1D(arr: np.ndarray):

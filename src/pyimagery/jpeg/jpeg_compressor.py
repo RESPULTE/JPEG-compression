@@ -3,10 +3,9 @@ from PIL import Image
 
 from pyencoder import HuffmanCoding, RunLengthEncoding
 
-from utils import chunkify, get_padded_size
-from dct import idct_1D, dct_1D
-from lookup_table import LUMA_QUANTIZATION_TABLE, CHROMA_QUANTIZATION_TABLE
-
+from pyimagery.utils import chunkify, get_padded_size
+from pyimagery.jpeg.dct import idct_1D, dct_1D
+from pyimagery.jpeg.lookup_table import LUMA_QUANTIZATION_TABLE, CHROMA_QUANTIZATION_TABLE
 
 SEP = "\0"
 
