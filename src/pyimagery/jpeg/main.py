@@ -1,7 +1,9 @@
+from turtle import color
 import numpy as np
 from PIL import Image
 
 from pyencoder import HuffmanCoding, RunLengthEncoding
+from pyencoder.utils import zigzag
 
 from pyimagery.utils import chunkify, get_padded_size
 from pyimagery.jpeg.dct import idct_1D, dct_1D
@@ -16,8 +18,8 @@ SEP = "\0"
 
 # TODO: add zigzag runlength for the encoding process
 
-# ! runlength string has depreciated
-def compress(path_to_img: str, filename: str = "") -> None:
+
+def compress(path_to_img: str) -> None:
     # Colorspace conversion
     img_arr = np.asarray(Image.open(path_to_img).convert("YCbCr"), dtype=np.float32)
 
@@ -42,38 +44,68 @@ def compress(path_to_img: str, filename: str = "") -> None:
     # seperate chroma into chroma-red & chroma-blue for dct & quantization
     ChromaB, ChromaR = CbCr[:, :, 0], CbCr[:, :, 1]
 
-    runlengthstring = ""
-    quantization_table = LUMA_QUANTIZATION_TABLE
-    for n, color_channel in enumerate([Luma, ChromaB, ChromaR]):
+    # for storage purpose
+    color_channel_name = ["Luma", "ChromaB", "ChromaR"]
+    headers = {c: {"dc": "", "ac": ""} for c in color_channel_name}
+    encoded_data = {c: {"dc": "", "ac": ""} for c in color_channel_name}
+
+    to_process = [
+        (Luma, LUMA_QUANTIZATION_TABLE),
+        (ChromaB, CHROMA_QUANTIZATION_TABLE),
+        (ChromaR, CHROMA_QUANTIZATION_TABLE),
+    ]
+    for n, (color_channel, quantization_table) in enumerate(to_process):
         # divide array into equal 8x8 chunk piece
-        block_arr = chunkify(color_channel, (8, 8))
+        chunk_view = chunkify(color_channel, (8, 8))
+        chunk_view_row, chunk_view_col = chunk_view.shape[0], chunk_view.shape[1]
 
         # shift the colorspace value
         color_channel -= 128
 
         # apply dct for each 8x8 chunk
-        for blocks in block_arr:
-            for block in blocks:
-                for index, row in enumerate(block):
-                    block[index] = dct_1D(row)
+        for chunks in chunk_view:
+            for chunk in chunks:
+                for index, row in enumerate(chunk):
+                    chunk[index] = dct_1D(row)
 
-                for index, col in enumerate(block.T):
-                    block.T[index] = dct_1D(col)
+                for index, col in enumerate(chunk.T):
+                    chunk.T[index] = dct_1D(col)
 
         # quantize the entire array at once
-        scaled_quantization_table = np.tile(quantization_table, (block_arr.shape[0], block_arr.shape[1], 1, 1))
-        block_arr /= scaled_quantization_table
-        block_arr.round(decimals=0, out=block_arr)
+        scaled_quantization_table = np.tile(quantization_table, (chunk_view_row, chunk_view_col, 1, 1))
+        chunk_view /= scaled_quantization_table
+        chunk_view = chunk_view.astype(np.int64, copy=False)
 
-        # encode the value of the array
-        runlengthstring += RunLengthEncoding.encode(color_channel.astype(np.int8).flatten(), int)
-        quantization_table = CHROMA_QUANTIZATION_TABLE
-        runlengthstring += SEP
+        # encode the DC/AC value
+        total_chunk_in_arr = chunk_view_row * chunk_view_col
+        dc_values = np.zeros(total_chunk_in_arr, dtype=np.int64)
+        ac_values = []
 
-    img_data = f"{img_row},{img_col}" + SEP + runlengthstring[:-1]
-    filename = filename if filename != "" else path_to_img.split("/")[-1].split(".")[0]
-    with open(f"{filename}.test", "wb") as f:
-        HuffmanCoding.dump(img_data, str, f)
+        for i, blocks in enumerate(chunk_view):
+            for j, block in enumerate(blocks):
+                index = i * chunk_view_col + j
+                ac_values.extend(RunLengthEncoding.encode(zigzag(block, "d")[1:], target_values=[0]))
+
+                # to be removed
+                if index == 0:
+                    dc_values[0] = block[0, 0]
+                    continue
+
+                dc_values[index] = block[0, 0] - blocks[j - 1, 0, 0]
+
+        dc_codebook, encoded_dc_values = HuffmanCoding.encode(dc_values)
+        ac_codebook, encoded_ac_values = HuffmanCoding.encode(ac_values)
+
+        dc_header = HuffmanCoding.generate_header_from_codebook(dc_codebook, "i")
+        ac_header = HuffmanCoding.generate_header_from_codebook(ac_codebook, "i")
+
+        curr_channel_name = color_channel_name[n]
+
+        headers[curr_channel_name]["dc"] = dc_header
+        headers[curr_channel_name]["ac"] = ac_header
+
+        encoded_data[curr_channel_name]["dc"] = encoded_dc_values
+        encoded_data[curr_channel_name]["ac"] = encoded_ac_values
 
 
 def decompress(filepath: str) -> Image.Image:
@@ -132,3 +164,6 @@ def decompress(filepath: str) -> Image.Image:
     YCC = np.dstack((Luma, ChromaB, ChromaR))[: img_size[0], : img_size[1]].astype(np.uint8)
 
     return Image.fromarray(YCC, "YCbCr").convert("RGB")
+
+
+# compress("C:/Users/yeapz/OneDrive/Desktop/Python/PyImagery/src/pyimagery/jpeg/test.png")
