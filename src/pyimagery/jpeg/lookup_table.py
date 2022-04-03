@@ -1,5 +1,5 @@
 import numpy as np
-
+from enum import Enum
 
 LUMA_QUANTIZATION_TABLE = np.array(
     [
@@ -28,3 +28,13 @@ CHROMA_QUANTIZATION_TABLE = np.array(
     ],
     dtype=np.int8,
 )
+
+
+class JPEG_Marker(Enum):
+    start_of_image = 0xFFD8
+    header_type = 0xFFE0
+    quantization_table = 0xFFDB
+    start_of_frame = 0xFFC0
+    huffman_table = 0xFFC4
+    start_of_scan = 0xFFDA
+    end_of_image = 0xFFD9
