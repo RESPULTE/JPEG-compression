@@ -30,11 +30,22 @@ CHROMA_QUANTIZATION_TABLE = np.array(
 )
 
 
-class JPEG_Marker(Enum):
-    start_of_image = 0xFFD8
-    header_type = 0xFFE0
-    quantization_table = 0xFFDB
-    start_of_frame = 0xFFC0
-    huffman_table = 0xFFC4
-    start_of_scan = 0xFFDA
-    end_of_image = 0xFFD9
+class JPEG_MARKER(Enum):
+    START_OF_FILE = 0xFFD8
+
+    HEADER = 0xFFE0
+
+    QUANTIZATION_TABLE = 0xFFDB
+
+    START_OF_FRAME = 0xFFC0
+
+    HUFFMAN_TABLE = 0xFFC4
+    DC_HUFFMAN_TABLE_TYPE = 0x0
+    AC_HUFFMAN_TABLE_TYPE = 0x1
+
+    LUMA_TYPE = 0x0
+    CHROMA_TYPE = 0x1
+
+    START_OF_SCAN = 0xFFDA
+
+    END_OF_FILE = 0xFFD9

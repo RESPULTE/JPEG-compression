@@ -1,6 +1,6 @@
 from heapq import heapify, heappop, heappush
 from collections import Counter
-from typing import BinaryIO, Literal, Optional, Type, Tuple, Dict, List, overload
+from typing import Literal, Tuple, Dict, List
 
 from pyimagery.utils.binary import frombin, tobin
 from pyimagery._type_hint import Bitcode
@@ -49,6 +49,7 @@ def decode(codebook: Dict[int, Bitcode], encoded_data: Bitcode) -> List[int]:
     return decoded_data
 
 
+# * done
 def encode(dataset: List[int], dtype: Literal["AC", "DC"]) -> Tuple[Dict[int, Bitcode], Bitcode]:
     if dtype == "AC":
         dataset_size = len(dataset)
@@ -58,7 +59,6 @@ def encode(dataset: List[int], dtype: Literal["AC", "DC"]) -> Tuple[Dict[int, Bi
         for index, (zero_runlength, data) in enumerate(dataset):
             bin_data = tobin(data, int)
             bindataset[index] = bin_data
-
             prefix_to_encode[index] = (zero_runlength, len(bin_data))
 
     else:
@@ -73,6 +73,7 @@ def encode(dataset: List[int], dtype: Literal["AC", "DC"]) -> Tuple[Dict[int, Bi
     return codebook, encoded_data
 
 
+# TODO
 def generate_header_from_codebook(codebook: Dict[int, Bitcode], dtype: Literal["AC", "DC"]) -> Bitcode:
     counted_codelengths = Counter([len(code) for code in codebook.values()])
     codelengths = ["0" * 8] * 16
@@ -82,19 +83,17 @@ def generate_header_from_codebook(codebook: Dict[int, Bitcode], dtype: Literal["
 
     if dtype == "DC":
         symbols = [tobin(bitsize - 1, "B", bitlength=4) for bitsize in codebook.keys()]
-        marker = "DC_MARKER"  # TODO: get the actual marker for this
     else:
         symbols = [
             ac_pair
             for zero_rle, bitsize in codebook.keys()
             for ac_pair in (tobin(zero_rle, "B", bitlength=4), tobin(bitsize - 1, "B", bitlength=4))
         ]
-        marker = "AC_MARKER"  # TODO: get the actual marker for this
 
-    header = codelengths + "".join(symbols)
-    return marker + tobin(len(header), "I", bitlength=32) + header
+    return codelengths + "".join(symbols)
 
 
+# * done
 def generate_canonical_codebook(dataset: List[int]) -> Dict[int, Bitcode]:
     counted_dataset = Counter(dataset).most_common()
     to_process = [(count, 1, [symbol]) for symbol, count in counted_dataset]
@@ -147,6 +146,7 @@ def generate_canonical_codebook(dataset: List[int]) -> Dict[int, Bitcode]:
     return canonical_codebook
 
 
+# TODO
 def generate_codebook_from_header(header: Bitcode) -> Dict[Bitcode, int]:
     dtype, header = header[:16], header[16:]
     try:
